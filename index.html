@@ -6,11 +6,18 @@
   <title>Share Location</title>
   <style>
     body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; padding: 2rem; }
+    label, input, button { display: block; margin: 0.5rem 0; }
+    input { padding: 0.5rem; width: 100%; max-width: 500px; }
     button { padding: 0.8rem 1.2rem; font-size: 1rem; cursor: pointer; border-radius: 8px; border: 1px solid #ccc; }
     #status { margin-top: 1rem; white-space: pre-wrap; }
   </style>
 </head>
 <body>
+  <h1>Save My Location</h1>
+
+  <label for="token">GitHub Token:</label>
+  <input type="password" id="token" placeholder="Enter your GitHub PAT" />
+
   <button id="share-btn">Share location</button>
   <div id="status" aria-live="polite"></div>
 
