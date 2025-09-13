@@ -5,21 +5,32 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Share Location</title>
   <style>
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; padding: 2rem; }
-    label, input, button { display: block; margin: 0.5rem 0; }
-    input { padding: 0.5rem; width: 100%; max-width: 500px; }
-    button { padding: 0.8rem 1.2rem; font-size: 1rem; cursor: pointer; border-radius: 8px; border: 1px solid #ccc; }
-    #status { margin-top: 1rem; white-space: pre-wrap; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; padding: 2rem; max-width: 720px; }
+    label { display:block; margin-top: 0.5rem; }
+    input { padding: 0.5rem; width: 100%; max-width: 520px; }
+    .row { display: flex; gap: .5rem; flex-wrap: wrap; margin-top: .75rem; }
+    button { padding: 0.8rem 1.1rem; border-radius: 10px; border: 1px solid #ccc; cursor: pointer; }
+    #status { margin-top: 1rem; white-space: pre-wrap; padding: .75rem; border: 1px dashed #ddd; border-radius: 8px; }
+    small.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
   </style>
 </head>
 <body>
   <h1>Save My Location</h1>
 
-  <label for="token">GitHub Token:</label>
-  <input type="password" id="token" placeholder="Enter your GitHub PAT" />
+  <label for="token">GitHub Token (classic <code>repo</code> scope, or fine-grained with <em>poli</em> + Contents: Read/Write):</label>
+  <input type="password" id="token" placeholder="Paste your GitHub PAT here" autocomplete="off" />
 
-  <button id="share-btn">Share location</button>
-  <div id="status" aria-live="polite"></div>
+  <div class="row">
+    <button id="perm-btn" type="button">Request location permission</button>
+    <button id="share-btn" type="button">Share location</button>
+  </div>
+
+  <p>
+    Permission state: <strong id="perm-state">unknown</strong>
+    <br><small class="mono">Tip: serve over https or http://localhost (not file://).</small>
+  </p>
+
+  <div id="status" aria-live="polite">Ready.</div>
 
   <script src="./work.js"></script>
 </body>
