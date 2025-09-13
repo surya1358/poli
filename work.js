@@ -2,7 +2,7 @@
 const GITHUB = {
   user: "surya1358",
   repo: "poli",
-  token: "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",
+  token: "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",
   branch: "main",
 };
 
