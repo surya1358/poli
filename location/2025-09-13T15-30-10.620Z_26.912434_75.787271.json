@@ -1,0 +1,23 @@
+{
+  "type": "Feature",
+  "geometry": {
+    "type": "Point",
+    "coordinates": [
+      75.7872709,
+      26.9124336
+    ]
+  },
+  "properties": {
+    "timestamp": "2025-09-13T15:30:09.522Z",
+    "accuracy": 303319.92986613413,
+    "altitude": null,
+    "altitudeAccuracy": null,
+    "heading": null,
+    "speed": null,
+    "links": {
+      "osm": "https://www.openstreetmap.org/?mlat=26.9124336&mlon=75.7872709#map=16/26.9124336/75.7872709",
+      "gmaps": "https://maps.google.com/?q=26.9124336,75.7872709"
+    },
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
+  }
+}
