@@ -1,8 +1,7 @@
-// ===== Configuration (hardcoded for your test) =====
+// ===== Configuration =====
 const GITHUB = {
   user: "surya1358",
   repo: "poli",
-  // You said to hardcode it here for testing:
   token: "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",
   branch: "main", // change if your default branch is different
 };
@@ -12,52 +11,70 @@ const $ = (sel) => document.querySelector(sel);
 const setStatus = (msg) => ($("#status").textContent = msg);
 
 function toBase64(str) {
-  // Safe base64 for UTF-8 strings
   return btoa(unescape(encodeURIComponent(str)));
 }
-
 function nowIso() {
   return new Date().toISOString();
 }
-
-// Create a unique filename for each capture
 function makeFilename(lat, lon) {
-  // Example: 2025-09-13T12-34-56.789Z_12.9716_77.5946.json
-  const ts = nowIso().replace(/[:]/g, "-");
-  const latStr = Number(lat).toFixed(6);
-  const lonStr = Number(lon).toFixed(6);
-  return `${ts}_${latStr}_${lonStr}.json`;
+  const ts = nowIso().replace(/:/g, "-");
+  return `${ts}_${Number(lat).toFixed(6)}_${Number(lon).toFixed(6)}.json`;
 }
 
-// Save a JSON blob to GitHub via the Contents API (creates a new file)
+async function githubFetch(url, options = {}) {
+  const res = await fetch(url, {
+    method: "GET",
+    mode: "cors",
+    cache: "no-store",
+    credentials: "omit",
+    headers: {
+      "Authorization": `Bearer ${GITHUB.token}`,
+      "Accept": "application/vnd.github+json",
+      "User-Agent": "location-uploader-test", // helps some proxies / clearer logs
+      "X-GitHub-Api-Version": "2022-11-28",
+      ...(options.headers || {}),
+    },
+    ...options,
+  });
+  return res;
+}
+
+// Sanity check: repo + branch reachable with this token
+async function checkRepoAccess() {
+  const url = `https://api.github.com/repos/${encodeURIComponent(GITHUB.user)}/${encodeURIComponent(GITHUB.repo)}/branches/${encodeURIComponent(GITHUB.branch)}`;
+  try {
+    const res = await githubFetch(url);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(`Repo/branch check failed (${res.status}): ${body.message || res.statusText}`);
+    }
+  } catch (e) {
+    throw new Error(`Network or permission issue reaching GitHub: ${e.message}`);
+  }
+}
+
+// Create a new file in location/
 async function saveToGitHub(path, jsonObj) {
   const url = `https://api.github.com/repos/${encodeURIComponent(GITHUB.user)}/${encodeURIComponent(GITHUB.repo)}/contents/${encodeURIComponent(path)}`;
-
   const payload = {
     message: `Save location from browser at ${nowIso()}`,
     content: toBase64(JSON.stringify(jsonObj, null, 2)),
     branch: GITHUB.branch,
   };
 
-  const res = await fetch(url, {
+  const res = await githubFetch(url, {
     method: "PUT",
-    headers: {
-      "Authorization": `Bearer ${GITHUB.token}`, // works with classic or fine-grained PATs
-      "Accept": "application/vnd.github+json",
-      "Content-Type": "application/json",
-      // Optional but good practice:
-      "X-GitHub-Api-Version": "2022-11-28",
-    },
     body: JSON.stringify(payload),
+    headers: { "Content-Type": "application/json" },
   });
 
-  const data = await res.json();
+  // If fetch itself failed, the catch above would’ve fired; at this point we have a response.
+  const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    // Bubble up a readable error
-    const msg = data && (data.message || JSON.stringify(data));
-    throw new Error(`GitHub API error (${res.status}): ${msg}`);
+    // Common: 401 (bad token/scope), 404 (no access/repo), 409 (branch protection)
+    throw new Error(`GitHub API error (${res.status}): ${data.message || JSON.stringify(data)}`);
   }
-  return data; // contains 'content' and 'commit'
+  return data;
 }
 
 // ===== Main flow =====
@@ -69,11 +86,12 @@ async function shareLocation() {
     return;
   }
 
-  // Ask for current position
   navigator.geolocation.getCurrentPosition(async (pos) => {
     try {
-      setStatus("Got location. Preparing to save to GitHub…");
+      setStatus("Checking repo access…");
+      await checkRepoAccess();
 
+      setStatus("Got location. Saving to GitHub…");
       const { latitude, longitude, accuracy, altitude, altitudeAccuracy, heading, speed } = pos.coords;
       const timestamp = new Date(pos.timestamp).toISOString();
 
@@ -87,7 +105,6 @@ async function shareLocation() {
           altitudeAccuracy,
           heading,
           speed,
-          // Handy links for sanity-checking:
           links: {
             openStreetMap: `https://www.openstreetmap.org/?mlat=${latitude}&mlon=${longitude}#map=16/${latitude}/${longitude}`,
             googleMaps: `https://maps.google.com/?q=${latitude},${longitude}`,
@@ -98,22 +115,18 @@ async function shareLocation() {
 
       const filename = makeFilename(latitude, longitude);
       const path = `location/${filename}`;
-
       const result = await saveToGitHub(path, record);
 
-      // Show a simple confirmation with the path that was created
       const htmlUrl = result?.content?.html_url || null;
-      setStatus(
-        htmlUrl
-          ? `Saved!\nFile: ${path}\nView on GitHub: ${htmlUrl}`
-          : `Saved!\nFile: ${path}`
-      );
+      setStatus(htmlUrl
+        ? `Saved!\nFile: ${path}\nView on GitHub: ${htmlUrl}`
+        : `Saved!\nFile: ${path}`);
     } catch (err) {
       console.error(err);
-      setStatus(`Failed to save to GitHub:\n${err.message}`);
+      // “Failed to fetch” (TypeError) never has a status; make it explicit
+      setStatus(`Failed to save to GitHub:\n${err.message}\n\nTips:\n• Serve from http://localhost or https\n• Check PAT scopes (Contents: Read+Write)\n• Confirm branch name (“${GITHUB.branch}”)`);
     }
   }, (err) => {
-    // Geolocation error handler
     const messages = {
       1: "Permission denied. Please allow location access and try again.",
       2: "Position unavailable. Try moving to an open area or check your connection.",
@@ -127,15 +140,11 @@ async function shareLocation() {
   });
 }
 
-// Wire up the button
 document.addEventListener("DOMContentLoaded", () => {
   const btn = $("#share-btn");
   if (!btn) return;
   btn.addEventListener("click", () => {
-    // Avoid double clicks
     btn.disabled = true;
-    shareLocation().finally(() => {
-      btn.disabled = false;
-    });
+    shareLocation().finally(() => { btn.disabled = false; });
   });
 });
